@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,11 +13,17 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		write, err := w.Write([]byte("welcome"))
+		_, err := w.Write([]byte("welcome"))
 		if err != nil {
+			log.Println(err)
 			return
 		}
 	})
-	fmt.Println("Hello")
+
+	err := http.ListenAndServe(":3000", r)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 }
