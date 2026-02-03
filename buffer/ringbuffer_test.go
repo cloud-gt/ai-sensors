@@ -33,7 +33,7 @@ func TestRingBuffer_LastNReturnsSubset(t *testing.T) {
 	rb, err := New(20)
 	require.NoError(t, err)
 	for i := range 10 {
-		fmt.Fprintf(rb, "line%d\n", i+1)
+		_, _ = fmt.Fprintf(rb, "line%d\n", i+1)
 	}
 
 	result := rb.LastN(3)
@@ -101,7 +101,7 @@ func TestRingBuffer_ConcurrentWriteAccess(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := range 100 {
-				fmt.Fprintf(rb, "goroutine%d-line%d\n", id, j)
+				_, _ = fmt.Fprintf(rb, "goroutine%d-line%d\n", id, j)
 			}
 		}(i)
 	}
@@ -123,7 +123,7 @@ func TestRingBuffer_ConcurrentReadWriteAccess(t *testing.T) {
 		go func(id int) {
 			defer writerWg.Done()
 			for j := range 50 {
-				fmt.Fprintf(rb, "writer%d-line%d\n", id, j)
+				_, _ = fmt.Fprintf(rb, "writer%d-line%d\n", id, j)
 			}
 		}(i)
 	}
