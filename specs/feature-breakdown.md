@@ -36,20 +36,9 @@ A server that shortens the feedback loop for code agents by:
 ### Feature 2: Process Runner
 **Goal:** Spawn an external process and capture its output
 
-**Scope:**
-- `Process` struct that wraps an `exec.Cmd`
-- `Start(output io.Writer)` method that launches the process
-- Combines stdout/stderr to the provided writer
-- `Stop()` method for graceful shutdown (SIGTERM then SIGKILL after timeout)
-- `Wait()` method to wait for completion
-- Observable state: Running, Stopped, Errored
-
 **Package:** `runner/`
 
-**Tests:** Unit tests with simple commands (echo, sleep, etc.)
-- Launch a short process, verify captured output
-- Launch a long process, stop it, verify it stops
-- Test different states (Running -> Stopped, Running -> Errored)
+**Full spec:** [process-runner.md](./process-runner.md)
 
 ---
 
