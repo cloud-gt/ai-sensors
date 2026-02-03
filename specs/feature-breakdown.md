@@ -66,24 +66,30 @@ A server that shortens the feedback loop for code agents by:
 ### Feature 5: REST API
 **Goal:** Expose everything via HTTP
 
+**Full spec:** [commands-rest-api.md](./commands-rest-api.md)
+
 **Command Endpoints:**
 - `GET /commands` - List defined commands
 - `POST /commands` - Create a command
-- `GET /commands/{name}` - Command details
-- `DELETE /commands/{name}` - Delete
+- `GET /commands/{id}` - Command details
+- `DELETE /commands/{id}` - Delete
 
 **Execution Endpoints:**
-- `POST /commands/{name}/start` - Start
-- `POST /commands/{name}/stop` - Stop
-- `GET /commands/{name}/status` - State (running/stopped/error)
+- `POST /commands/{id}/start` - Start
+- `POST /commands/{id}/stop` - Stop
+- `GET /commands/{id}/status` - State (running/stopped/not_started)
 
 **Output Endpoints:**
-- `GET /commands/{name}/output` - Full buffer
-- `GET /commands/{name}/output?lines=N` - Last N lines
+- `GET /commands/{id}/output` - Full buffer
+- `GET /commands/{id}/output?lines=N` - Last N lines
 
-**Package:** `server/` (existing, to be enriched)
+**Package:** `server/`
+- `server.go` - Main server (mounts sub-routers)
+- `commands.go` - Commands API handlers + router
+- `commands_test.go` - HTTP tests
+- `testclient_test.go` - Test client wrapper for cleaner tests
 
-**Tests:** HTTP tests (at the end)
+**Tests:** HTTP tests using a TestClient wrapper
 - Use `httptest` to test handlers
 - E2E scenarios: create command via API, start, read output, stop
 - Verify HTTP return codes, errors, etc.
@@ -166,24 +172,27 @@ F6: buffer/ (observable) ──> can be added after F1 or after F5
 ```
 ai-sensors/
 ├── main.go
-├── commands.json          # Persistence (created at runtime)
+├── commands.json            # Persistence (created at runtime)
 ├── buffer/
-│   ├── ring.go
-│   └── ring_test.go
+│   ├── ringbuffer.go
+│   └── ringbuffer_test.go
 ├── runner/
-│   ├── process.go
-│   └── process_test.go
+│   ├── runner.go
+│   └── runner_test.go
 ├── command/
-│   ├── command.go
-│   ├── store.go
-│   └── store_test.go
+│   ├── command.go           # Command struct + errors
+│   ├── store.go             # In-memory store with CRUD
+│   ├── store_test.go
+│   ├── repository.go        # Repository interface
+│   └── repository_test.go
 ├── manager/
-│   ├── manager.go
+│   ├── manager.go           # Orchestrates Store + Runner + Buffer
 │   └── manager_test.go
 └── server/
-    ├── server.go
-    ├── handlers.go
-    └── server_test.go
+    ├── server.go            # Main server (mounts sub-routers)
+    ├── commands.go          # Commands API handlers + router
+    ├── commands_test.go     # HTTP integration tests
+    └── testclient_test.go   # Test client wrapper
 ```
 
 ---
@@ -197,11 +206,15 @@ To test the complete system:
    ```bash
    curl -X POST localhost:3000/commands \
      -H "Content-Type: application/json" \
-     -d '{"name":"watch-tests","cmd":"gotestsum","args":["--watch"]}'
+     -d '{"name":"watch-tests","command":"go test ./... -v"}'
+   # Response: {"id":"<uuid>","name":"watch-tests","command":"go test ./... -v"}
    ```
-3. Start the command: `curl -X POST localhost:3000/commands/watch-tests/start`
-4. Read output: `curl localhost:3000/commands/watch-tests/output`
-5. Stop: `curl -X POST localhost:3000/commands/watch-tests/stop`
+3. Start the command: `curl -X POST localhost:3000/commands/<uuid>/start`
+4. Check status: `curl localhost:3000/commands/<uuid>/status`
+5. Read output: `curl localhost:3000/commands/<uuid>/output`
+6. Read last 10 lines: `curl localhost:3000/commands/<uuid>/output?lines=10`
+7. Stop: `curl -X POST localhost:3000/commands/<uuid>/stop`
+8. Delete: `curl -X DELETE localhost:3000/commands/<uuid>`
 
 ---
 
