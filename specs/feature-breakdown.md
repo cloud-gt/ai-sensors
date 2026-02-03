@@ -1,140 +1,178 @@
 # Plan: AI-Sensors - Feature Breakdown
 
-## Vision du Projet
+## Project Vision
 
-Serveur qui raccourcit la boucle de feedback pour les agents de code en:
-- Exécutant des commandes en mode watch/continu
-- Capturant leur output en temps réel
-- Exposant ces logs via une API simple
+A server that shortens the feedback loop for code agents by:
+- Running commands in watch/continuous mode
+- Capturing their output in real-time
+- Exposing these logs via a simple API
 
-## Décisions Architecturales
+## Architectural Decisions
 
-- **Scope:** Mono-projet (un serveur = un projet)
-- **Structure:** Modules Go séparés pour chaque composant logique (réutilisabilité)
-- **Persistence:** Fichier JSON simple (load au démarrage, save à chaque modification)
-- **Output format:** Lignes brutes (pas de metadata)
+- **Scope:** Single-project (one server = one project)
+- **Structure:** Separate Go modules for each logical component (reusability)
+- **Persistence:** Simple JSON file (load at startup, save on each modification)
+- **Output format:** Raw lines (no metadata)
 
-## Philosophie de Test
+## Testing Philosophy
 
-- **Modules découplés:** Chaque package (buffer, runner, command) doit être testable en isolation
-- **Pas de mocks inutiles:** Les tests unitaires testent le module directement, sans mocker ses internals
-- **Dépendances via interfaces:** Quand un module dépend d'un autre, utiliser des interfaces pour permettre l'injection
-- **Tests par couche:**
-  - F1-F3: Tests unitaires purs (pas de dépendances externes)
-  - F4: Tests d'intégration légers (peut utiliser les vrais modules)
-  - F5: Tests HTTP contre l'API (à la fin, quand tout est assemblé)
+- **Decoupled modules:** Each package (buffer, runner, command) must be testable in isolation
+- **No unnecessary mocks:** Unit tests test the module directly, without mocking its internals
+- **Dependencies via interfaces:** When a module depends on another, use interfaces to allow injection
 
 ---
 
-## Découpage en Features
+## Feature Breakdown
 
 ### Feature 1: Ring Buffer
-**But:** Stocker les N dernières lignes d'output sans exploser la mémoire
-
-**Scope:**
-- Struct `RingBuffer` avec capacité configurable (ex: 1000 lignes)
-- Implémente `io.Writer` pour recevoir l'output
-- Méthode `Lines()` pour récupérer le contenu actuel
-- Méthode `LastN(n)` pour les N dernières lignes
-- Thread-safe (mutex pour concurrent access)
+**Goal:** Store the N most recent output lines without exploding memory
 
 **Package:** `buffer/`
 
-**Tests:** Pur unit test - aucune dépendance externe
-- Écrire des données, vérifier qu'on récupère les bonnes lignes
-- Tester le comportement circulaire (overflow)
-- Tester la concurrence (goroutines parallèles)
+**Full spec:** [ring-buffer.md](./ring-buffer.md)
 
 ---
 
 ### Feature 2: Process Runner
-**But:** Spawner un process externe et capturer son output
+**Goal:** Spawn an external process and capture its output
 
 **Scope:**
-- Struct `Process` qui encapsule un `exec.Cmd`
-- Méthode `Start(output io.Writer)` qui lance le process
-- Combine stdout/stderr vers le writer fourni
-- Méthode `Stop()` pour arrêter proprement (SIGTERM puis SIGKILL après timeout)
-- Méthode `Wait()` pour attendre la fin
-- État observable: Running, Stopped, Errored
+- `Process` struct that wraps an `exec.Cmd`
+- `Start(output io.Writer)` method that launches the process
+- Combines stdout/stderr to the provided writer
+- `Stop()` method for graceful shutdown (SIGTERM then SIGKILL after timeout)
+- `Wait()` method to wait for completion
+- Observable state: Running, Stopped, Errored
 
 **Package:** `runner/`
 
-**Tests:** Unit tests avec commandes simples (echo, sleep, etc.)
-- Lancer un process court, vérifier l'output capturé
-- Lancer un process long, le stopper, vérifier qu'il s'arrête
-- Tester les différents états (Running -> Stopped, Running -> Errored)
+**Tests:** Unit tests with simple commands (echo, sleep, etc.)
+- Launch a short process, verify captured output
+- Launch a long process, stop it, verify it stops
+- Test different states (Running -> Stopped, Running -> Errored)
 
 ---
 
 ### Feature 3: Command Definition + JSON Store
-**But:** Définir et persister des commandes
+**Goal:** Define and persist commands
 
 **Scope:**
-- Struct `Command` (Name, WorkDir, Cmd, Args, Env)
-- `Store` interface avec impl JSON file
-- Méthodes: Save, Load, Add, Remove, Get, List
-- Auto-save à chaque modification
+- `Command` struct (Name, WorkDir, Cmd, Args, Env)
+- `Store` interface with JSON file implementation
+- Methods: Save, Load, Add, Remove, Get, List
+- Auto-save on each modification
 
 **Package:** `command/`
 
-**Tests:** Unit tests avec fichier temp
-- CRUD complet (Add, Get, Remove, List)
-- Vérifier que Save/Load préserve les données
-- Tester avec fichier inexistant (création automatique)
+**Tests:** Unit tests with temp file
+- Full CRUD (Add, Get, Remove, List)
+- Verify that Save/Load preserves data
+- Test with non-existent file (automatic creation)
 
 ---
 
 ### Feature 4: Manager (orchestration)
-**But:** Lier Store + Runner + Buffer
+**Goal:** Link Store + Runner + Buffer
 
 **Scope:**
-- `Manager` struct avec:
-  - Référence au command store
-  - Map des processes actifs (name -> Process + Buffer)
-- Méthodes:
-  - `Start(name)` - charge la commande, crée buffer, lance process
-  - `Stop(name)` - arrête le process
-  - `Output(name)` - retourne le contenu du buffer
-  - `Status(name)` - état du process
+- `Manager` struct with:
+  - Reference to the command store
+  - Map of active processes (name -> Process + Buffer)
+- Methods:
+  - `Start(name)` - loads command, creates buffer, launches process
+  - `Stop(name)` - stops the process
+  - `Output(name)` - returns buffer content
+  - `Status(name)` - process state
 
 **Package:** `manager/`
 
-**Tests:** Tests d'intégration légers
-- Utilise les vrais modules (buffer, runner, command)
-- Scénario complet: définir commande -> start -> lire output -> stop
-- Peut utiliser un store en mémoire ou fichier temp
+**Tests:** Lightweight integration tests
+- Uses real modules (buffer, runner, command)
+- Complete scenario: define command -> start -> read output -> stop
+- Can use in-memory store or temp file
 
 ---
 
-### Feature 5: API REST
-**But:** Exposer tout via HTTP
+### Feature 5: REST API
+**Goal:** Expose everything via HTTP
 
-**Endpoints Commandes:**
-- `GET /commands` - Liste des commandes définies
-- `POST /commands` - Créer une commande
-- `GET /commands/{name}` - Détails d'une commande
-- `DELETE /commands/{name}` - Supprimer
+**Command Endpoints:**
+- `GET /commands` - List defined commands
+- `POST /commands` - Create a command
+- `GET /commands/{name}` - Command details
+- `DELETE /commands/{name}` - Delete
 
-**Endpoints Execution:**
-- `POST /commands/{name}/start` - Démarrer
-- `POST /commands/{name}/stop` - Arrêter
-- `GET /commands/{name}/status` - État (running/stopped/error)
+**Execution Endpoints:**
+- `POST /commands/{name}/start` - Start
+- `POST /commands/{name}/stop` - Stop
+- `GET /commands/{name}/status` - State (running/stopped/error)
 
-**Endpoints Output:**
-- `GET /commands/{name}/output` - Buffer complet
-- `GET /commands/{name}/output?lines=N` - N dernières lignes
+**Output Endpoints:**
+- `GET /commands/{name}/output` - Full buffer
+- `GET /commands/{name}/output?lines=N` - Last N lines
 
-**Package:** `server/` (existant, à enrichir)
+**Package:** `server/` (existing, to be enriched)
 
-**Tests:** Tests HTTP (à la fin)
-- Utiliser `httptest` pour tester les handlers
-- Scénarios E2E: créer commande via API, démarrer, lire output, stopper
-- Vérifier les codes de retour HTTP, les erreurs, etc.
+**Tests:** HTTP tests (at the end)
+- Use `httptest` to test handlers
+- E2E scenarios: create command via API, start, read output, stop
+- Verify HTTP return codes, errors, etc.
 
 ---
 
-## Ordre d'Implémentation
+### Feature 6: Line Pipeline (Observable Ring Buffer)
+**Goal:** Enable real-time line post-processing via an observable pattern
+
+**Context:**
+- The RingBuffer (F1) stores lines but is "passive" (read on demand)
+- We want to react to each new line (push notification)
+- Use cases: filtering, structured parsing, forwarding to other systems
+
+**Scope:**
+- Add an observation mechanism to RingBuffer:
+  - Callback option: `OnLine(fn func(line string))` - called for each new line
+  - Channel option: `Subscribe() <-chan string` - returns a channel that receives new lines
+- Multi-observer support (multiple consumers can listen)
+- Observers receive lines in real-time (in `Write()`)
+- Circular storage continues to work (queryable history)
+
+**Idiomatic Go pattern:**
+```go
+// Fan-out: RingBuffer becomes a "hub"
+rb := buffer.New(1000)
+
+// Observer 1: log all lines
+rb.OnLine(func(line string) {
+    log.Println(line)
+})
+
+// Observer 2: filter errors
+rb.OnLine(func(line string) {
+    if strings.Contains(line, "ERROR") {
+        errorQueue <- line
+    }
+})
+
+// Process writes normally
+process.Start(rb)  // rb still implements io.Writer
+```
+
+**Package:** `buffer/` (extension of F1)
+
+**Tests:**
+- Verify callbacks are called for each new line
+- Test with multiple simultaneous observers
+- Verify circular storage still works
+- Test concurrency (slow observers don't block `Write()`)
+
+**Considerations:**
+- Callbacks must be non-blocking (or executed in separate goroutines)
+- Option: buffered channel to absorb spikes
+- RingBuffer keeps its storage role, observation is opt-in
+
+---
+
+## Implementation Order
 
 ```
 F1: buffer/     ─┐
@@ -142,20 +180,23 @@ F1: buffer/     ─┐
 F2: runner/     ─┤
                  │
 F3: command/    ─┘
+
+F6: buffer/ (observable) ──> can be added after F1 or after F5
 ```
 
-**F1, F2, F3** sont indépendants (peuvent être faits en parallèle ou dans n'importe quel ordre)
-**F4** intègre les trois
-**F5** expose le manager via HTTP
+**F1, F2, F3** are independent (can be done in parallel or in any order)
+**F4** integrates all three
+**F5** exposes the manager via HTTP
+**F6** extends F1 with observability - can be done once F1 is stable, or after MVP (F5)
 
 ---
 
-## Structure Finale des Packages
+## Final Package Structure
 
 ```
 ai-sensors/
 ├── main.go
-├── commands.json          # Persistence (créé au runtime)
+├── commands.json          # Persistence (created at runtime)
 ├── buffer/
 │   ├── ring.go
 │   └── ring_test.go
@@ -177,27 +218,27 @@ ai-sensors/
 
 ---
 
-## Vérification (End-to-End)
+## Verification (End-to-End)
 
-Pour tester le système complet:
+To test the complete system:
 
-1. Démarrer le serveur: `go run main.go`
-2. Créer une commande:
+1. Start the server: `go run main.go`
+2. Create a command:
    ```bash
    curl -X POST localhost:3000/commands \
      -H "Content-Type: application/json" \
      -d '{"name":"watch-tests","cmd":"gotestsum","args":["--watch"]}'
    ```
-3. Démarrer la commande: `curl -X POST localhost:3000/commands/watch-tests/start`
-4. Lire l'output: `curl localhost:3000/commands/watch-tests/output`
-5. Stopper: `curl -X POST localhost:3000/commands/watch-tests/stop`
+3. Start the command: `curl -X POST localhost:3000/commands/watch-tests/start`
+4. Read output: `curl localhost:3000/commands/watch-tests/output`
+5. Stop: `curl -X POST localhost:3000/commands/watch-tests/stop`
 
 ---
 
-## Backlog (futures features)
+## Backlog (future features)
 
-- **Streaming SSE:** Output en temps réel sans polling
-- **Multi-projet:** Support de plusieurs projets
-- **Templates:** Presets pour Go, Node, Rust, etc.
-- **Filtrage:** Grep-like sur le buffer
-- **MCP Integration:** Exposer comme outil MCP pour agents
+- **SSE Streaming:** Real-time output without polling
+- **Multi-project:** Support for multiple projects
+- **Templates:** Presets for Go, Node, Rust, etc.
+- **Filtering:** Grep-like on the buffer
+- **MCP Integration:** Expose as MCP tool for agents

@@ -145,6 +145,7 @@ Based on the gathered information, create a spec file at `specs/<feature-name>.m
 
 ## Important Notes
 
+- **IMPORTANT: All specs must be written entirely in English**, regardless of the language the user communicates in
 - Keep test scenarios concrete and actionable
 - If the feature extends an existing package, note what interfaces or types it should implement
 
