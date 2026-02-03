@@ -71,12 +71,12 @@ import (
 )
 
 func Test<FeatureName>_<ScenarioName>(t *testing.T) {
-    // Given: [setup from spec]
+    rb, err := New(10)
+    require.NoError(t, err)
 
-    // When: [action from spec]
+    rb.Write([]byte("line1\nline2\n"))
 
-    // Then: [assertion from spec]
-    assert.Equal(t, expected, actual)
+    assert.Equal(t, []string{"line1", "line2"}, rb.Lines())
 }
 ```
 
@@ -86,6 +86,7 @@ func Test<FeatureName>_<ScenarioName>(t *testing.T) {
 - Group related scenarios in subtests with `t.Run()` when appropriate
 - For concurrent tests, use `t.Parallel()` and sync primitives
 - Mark each test task as `in_progress` before starting, `completed` when done
+- **No comments in tests** - test names should be descriptive, code should be self-explanatory
 
 ## Phase 4: Implement Production Code
 
@@ -103,6 +104,7 @@ func Test<FeatureName>_<ScenarioName>(t *testing.T) {
 - Implement error handling as defined in the spec
 - Keep the implementation minimal - only what's needed to pass tests
 - Mark the implementation task as `in_progress` before starting
+- **No comments unless necessary** - write clear, simple code that doesn't need explanation. Only add comments when the logic is truly non-obvious.
 
 ## Phase 5: Verification (Exit Conditions)
 
@@ -142,6 +144,7 @@ go test ./<package>/... -v
 - **Incremental progress** - run tests frequently, fix issues as they arise
 - **Use TaskUpdate** - keep task statuses current for visibility
 - **Error messages matter** - when tests fail, read the error carefully before fixing
+- **Avoid comments** - code should be simple and self-explanatory; only comment when truly necessary
 
 ## Reference Files
 - `.air.toml` - Contains the project's build command
