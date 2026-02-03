@@ -57,22 +57,9 @@ A server that shortens the feedback loop for code agents by:
 ### Feature 4: Manager (orchestration)
 **Goal:** Link Store + Runner + Buffer
 
-**Scope:**
-- `Manager` struct with:
-  - Reference to the command store
-  - Map of active processes (name -> Process + Buffer)
-- Methods:
-  - `Start(name)` - loads command, creates buffer, launches process
-  - `Stop(name)` - stops the process
-  - `Output(name)` - returns buffer content
-  - `Status(name)` - process state
-
 **Package:** `manager/`
 
-**Tests:** Lightweight integration tests
-- Uses real modules (buffer, runner, command)
-- Complete scenario: define command -> start -> read output -> stop
-- Can use in-memory store or temp file
+**Full spec:** [command-execution-manager.md](./command-execution-manager.md)
 
 ---
 
