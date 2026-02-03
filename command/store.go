@@ -100,3 +100,16 @@ func (s *Store) List() ([]Command, error) {
 
 	return result, nil
 }
+
+func (s *Store) GetByName(name string) (Command, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, cmd := range s.commands {
+		if cmd.Name == name {
+			return cmd, nil
+		}
+	}
+
+	return Command{}, ErrNotFound
+}
