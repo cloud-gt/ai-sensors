@@ -1,0 +1,9 @@
+//go:build tools
+
+package tools
+
+import (
+	_ "github.com/cortesi/modd/cmd/modd"
+	_ "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
+	_ "gotest.tools/gotestsum"
+)
