@@ -1,6 +1,6 @@
 ---
 name: impl
-description: Implement a feature from its specification. Reads a spec file from specs/, implements tests and production code, then verifies all exit conditions (format, build, tests).
+description: Implement a feature from its specification. Reads a spec file from specs/, implements tests and production code, then verifies all exit conditions (format, build, tests, lint).
 argument-hint: <feature-name>
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
@@ -47,7 +47,7 @@ Use TaskCreate to track progress. Create one task per test scenario plus impleme
 
 **Verification task:**
 - Subject: "Verify exit conditions"
-- Description: Run format, build, and tests checks
+- Description: Run format, build, tests, and lint checks
 
 Set up dependencies:
 - Production code task is blocked by all test tasks
@@ -87,6 +87,8 @@ func Test<FeatureName>_<ScenarioName>(t *testing.T) {
 - For concurrent tests, use `t.Parallel()` and sync primitives
 - Mark each test task as `in_progress` before starting, `completed` when done
 - **No comments in tests** - test names should be descriptive, code should be self-explanatory
+- **Explicitly ignore unused return values** with `_ =` (e.g., `_ = r.Start(ctx)` in goroutines where error is not checked)
+- **Use `//nolint:<linter>` directives** only for intentional edge case tests (e.g., `//nolint:staticcheck // testing nil context`)
 
 ## Phase 4: Implement Production Code
 
@@ -105,10 +107,11 @@ func Test<FeatureName>_<ScenarioName>(t *testing.T) {
 - Keep the implementation minimal - only what's needed to pass tests
 - Mark the implementation task as `in_progress` before starting
 - **No comments unless necessary** - write clear, simple code that doesn't need explanation. Only add comments when the logic is truly non-obvious.
+- **Handle or log all errors** - never silently ignore return values; use `slog.Warn()` for errors that cannot be returned
 
 ## Phase 5: Verification (Exit Conditions)
 
-All three checks must pass before marking the feature complete:
+All four checks must pass before marking the feature complete:
 
 ### 1. Format Check
 ```bash
@@ -127,6 +130,12 @@ go build -o ./tmp/main .
 go test ./<package>/... -v
 ```
 **Success criteria:** All tests pass, exit code 0
+
+### 4. Lint Check
+```bash
+go run github.com/golangci/golangci-lint/cmd/golangci-lint run ./<package>/...
+```
+**Success criteria:** No warnings or errors, exit code 0
 
 **If any check fails:**
 1. Fix the issue

@@ -24,7 +24,7 @@ func TestRingBuffer_CircularBehaviorOverflow(t *testing.T) {
 	rb, err := New(3)
 	require.NoError(t, err)
 
-	rb.Write([]byte("a\nb\nc\nd\ne\n"))
+	_, _ = rb.Write([]byte("a\nb\nc\nd\ne\n"))
 
 	assert.Equal(t, []string{"c", "d", "e"}, rb.Lines())
 }
@@ -45,7 +45,7 @@ func TestRingBuffer_MultipleLinesInSingleWrite(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
 
-	rb.Write([]byte("a\nb\nc\nd\n"))
+	_, _ = rb.Write([]byte("a\nb\nc\nd\n"))
 
 	assert.Equal(t, []string{"a", "b", "c", "d"}, rb.Lines())
 }
@@ -53,7 +53,7 @@ func TestRingBuffer_MultipleLinesInSingleWrite(t *testing.T) {
 func TestRingBuffer_EmptyWrite(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
-	rb.Write([]byte("existing\n"))
+	_, _ = rb.Write([]byte("existing\n"))
 
 	n, err := rb.Write([]byte(""))
 
@@ -66,7 +66,7 @@ func TestRingBuffer_MinimumCapacity(t *testing.T) {
 	rb, err := New(1)
 	require.NoError(t, err)
 
-	rb.Write([]byte("first\nsecond\nthird\n"))
+	_, _ = rb.Write([]byte("first\nsecond\nthird\n"))
 
 	assert.Equal(t, []string{"third"}, rb.Lines())
 }
@@ -74,7 +74,7 @@ func TestRingBuffer_MinimumCapacity(t *testing.T) {
 func TestRingBuffer_LastNGreaterThanLines(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
-	rb.Write([]byte("a\nb\nc\n"))
+	_, _ = rb.Write([]byte("a\nb\nc\n"))
 
 	result := rb.LastN(100)
 
@@ -84,7 +84,7 @@ func TestRingBuffer_LastNGreaterThanLines(t *testing.T) {
 func TestRingBuffer_LastNZero(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
-	rb.Write([]byte("a\nb\nc\n"))
+	_, _ = rb.Write([]byte("a\nb\nc\n"))
 
 	result := rb.LastN(0)
 
@@ -156,7 +156,7 @@ func TestRingBuffer_IncompleteLineNoTrailingNewline(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
 
-	rb.Write([]byte("line1\nline2"))
+	_, _ = rb.Write([]byte("line1\nline2"))
 
 	assert.Equal(t, []string{"line1", "line2"}, rb.Lines())
 }
@@ -165,8 +165,8 @@ func TestRingBuffer_FragmentedLineWrite(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
 
-	rb.Write([]byte("hel"))
-	rb.Write([]byte("lo\n"))
+	_, _ = rb.Write([]byte("hel"))
+	_, _ = rb.Write([]byte("lo\n"))
 
 	assert.Equal(t, []string{"hello"}, rb.Lines())
 }
@@ -175,7 +175,7 @@ func TestRingBuffer_CRLFLineEnding(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
 
-	rb.Write([]byte("line1\r\nline2\r\nline3\r\n"))
+	_, _ = rb.Write([]byte("line1\r\nline2\r\nline3\r\n"))
 
 	assert.Equal(t, []string{"line1", "line2", "line3"}, rb.Lines())
 }
@@ -191,7 +191,7 @@ func TestRingBuffer_InvalidCapacity(t *testing.T) {
 func TestRingBuffer_LastNNegative(t *testing.T) {
 	rb, err := New(10)
 	require.NoError(t, err)
-	rb.Write([]byte("a\nb\nc\n"))
+	_, _ = rb.Write([]byte("a\nb\nc\n"))
 
 	result := rb.LastN(-1)
 
