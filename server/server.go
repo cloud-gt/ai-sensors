@@ -12,7 +12,7 @@ func New() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("salut !"))
+		_, err := w.Write([]byte("wesh !"))
 		if err != nil {
 			log.Println(err)
 			return
