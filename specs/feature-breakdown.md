@@ -45,15 +45,9 @@ A server that shortens the feedback loop for code agents by:
 ### Feature 3: Command Definition + JSON Store
 **Goal:** Define and persist commands
 
-**Scope:**
-- `Command` struct (Name, WorkDir, Cmd, Args, Env)
-- `Store` interface with JSON file implementation
-- Methods: Save, Load, Add, Remove, Get, List
-- Auto-save on each modification
-
 **Package:** `command/`
 
-**Tests:** Unit tests with temp file
+**Full spec:** [command-definition.md](./command-definition.md)
 - Full CRUD (Add, Get, Remove, List)
 - Verify that Save/Load preserves data
 - Test with non-existent file (automatic creation)
