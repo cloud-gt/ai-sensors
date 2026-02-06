@@ -26,6 +26,9 @@ func (s *Store) Create(cmd Command) (Command, error) {
 	if cmd.Command == "" {
 		return Command{}, ErrEmptyCommand
 	}
+	if cmd.WorkDir == "" {
+		return Command{}, ErrEmptyWorkDir
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()

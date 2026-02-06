@@ -21,3 +21,11 @@ out/
 *.out
 
 tmp/
+
+# SvelteKit / Node
+ui/node_modules/
+ui/.svelte-kit/
+
+# Embedded dashboard build output (except .gitkeep)
+dashboard/dist/*
+!dashboard/dist/.gitkeep

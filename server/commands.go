@@ -53,6 +53,7 @@ func (api *CommandsAPI) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name    string `json:"name"`
 		Command string `json:"command"`
+		WorkDir string `json:"work_dir"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -68,6 +69,10 @@ func (api *CommandsAPI) handleCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "command is required")
 		return
 	}
+	if req.WorkDir == "" {
+		writeError(w, http.StatusBadRequest, "work_dir is required")
+		return
+	}
 
 	existing, err := api.store.GetByName(req.Name)
 	if err == nil && existing.ID != uuid.Nil {
@@ -78,6 +83,7 @@ func (api *CommandsAPI) handleCreate(w http.ResponseWriter, r *http.Request) {
 	cmd, err := api.store.Create(command.Command{
 		Name:    req.Name,
 		Command: req.Command,
+		WorkDir: req.WorkDir,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal server error")

@@ -15,6 +15,7 @@ func TestStore_CreateNewCommandDefinition(t *testing.T) {
 	cmd, err := store.Create(Command{
 		Name:    "test-command",
 		Command: "echo hello",
+		WorkDir: "/tmp",
 	})
 
 	require.NoError(t, err)
@@ -28,6 +29,7 @@ func TestStore_RetrieveExistingCommandDefinition(t *testing.T) {
 	created, err := store.Create(Command{
 		Name:    "test-command",
 		Command: "echo hello",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -42,6 +44,7 @@ func TestStore_UpdateExistingCommandDefinition(t *testing.T) {
 	created, err := store.Create(Command{
 		Name:    "original-name",
 		Command: "original-command",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -49,6 +52,7 @@ func TestStore_UpdateExistingCommandDefinition(t *testing.T) {
 		ID:      created.ID,
 		Name:    "updated-name",
 		Command: "updated-command",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -58,6 +62,7 @@ func TestStore_UpdateExistingCommandDefinition(t *testing.T) {
 		ID:      created.ID,
 		Name:    "updated-name",
 		Command: "updated-command",
+		WorkDir: "/tmp",
 	}, retrieved)
 }
 
@@ -66,6 +71,7 @@ func TestStore_DeleteExistingCommandDefinition(t *testing.T) {
 	created, err := store.Create(Command{
 		Name:    "test-command",
 		Command: "echo hello",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -78,11 +84,11 @@ func TestStore_DeleteExistingCommandDefinition(t *testing.T) {
 
 func TestStore_ListAllCommandDefinitions(t *testing.T) {
 	store := NewStore(NewMemoryRepository())
-	_, err := store.Create(Command{Name: "cmd1", Command: "echo 1"})
+	_, err := store.Create(Command{Name: "cmd1", Command: "echo 1", WorkDir: "/tmp"})
 	require.NoError(t, err)
-	_, err = store.Create(Command{Name: "cmd2", Command: "echo 2"})
+	_, err = store.Create(Command{Name: "cmd2", Command: "echo 2", WorkDir: "/tmp"})
 	require.NoError(t, err)
-	_, err = store.Create(Command{Name: "cmd3", Command: "echo 3"})
+	_, err = store.Create(Command{Name: "cmd3", Command: "echo 3", WorkDir: "/tmp"})
 	require.NoError(t, err)
 
 	commands, err := store.List()
@@ -97,6 +103,7 @@ func TestStore_CreateWithEmptyName(t *testing.T) {
 	_, err := store.Create(Command{
 		Name:    "",
 		Command: "echo hello",
+		WorkDir: "/tmp",
 	})
 
 	assert.ErrorIs(t, err, ErrEmptyName)
@@ -108,9 +115,35 @@ func TestStore_CreateWithEmptyCommand(t *testing.T) {
 	_, err := store.Create(Command{
 		Name:    "test-command",
 		Command: "",
+		WorkDir: "/tmp",
 	})
 
 	assert.ErrorIs(t, err, ErrEmptyCommand)
+}
+
+func TestStore_CreateWithEmptyWorkDir(t *testing.T) {
+	store := NewStore(NewMemoryRepository())
+
+	_, err := store.Create(Command{
+		Name:    "test-command",
+		Command: "echo hello",
+		WorkDir: "",
+	})
+
+	assert.ErrorIs(t, err, ErrEmptyWorkDir)
+}
+
+func TestStore_CreateWithWorkDir(t *testing.T) {
+	store := NewStore(NewMemoryRepository())
+
+	cmd, err := store.Create(Command{
+		Name:    "test-command",
+		Command: "echo hello",
+		WorkDir: "/tmp",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "/tmp", cmd.WorkDir)
 }
 
 func TestStore_GetNonExistentCommand(t *testing.T) {
@@ -152,6 +185,7 @@ func TestStore_ConcurrentAccessSafety(t *testing.T) {
 			cmd, err := store.Create(Command{
 				Name:    "cmd",
 				Command: "echo",
+				WorkDir: "/tmp",
 			})
 			if err != nil {
 				return
@@ -162,6 +196,7 @@ func TestStore_ConcurrentAccessSafety(t *testing.T) {
 				ID:      cmd.ID,
 				Name:    "updated",
 				Command: "echo updated",
+				WorkDir: "/tmp",
 			})
 			_, _ = store.List()
 			_ = store.Delete(cmd.ID)

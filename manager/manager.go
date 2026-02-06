@@ -92,13 +92,14 @@ func (m *Manager) Start(ctx context.Context, id uuid.UUID) (bool, error) {
 		Command: "sh",
 		Args:    []string{"-c", cmd.Command},
 		Output:  buf,
+		Dir:     cmd.WorkDir,
 	})
 	if err != nil {
 		m.mu.Unlock()
 		return false, err
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	inst := &Instance{
 		command: cmd,

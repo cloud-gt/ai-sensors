@@ -388,6 +388,37 @@ func TestRunner_NilContext(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRunner_RunsInSpecifiedDirectory(t *testing.T) {
+	dir := t.TempDir()
+	var buf bytes.Buffer
+	r, err := New(Config{
+		Command: "pwd",
+		Output:  &buf,
+		Dir:     dir,
+	})
+	require.NoError(t, err)
+
+	err = r.Start(context.Background())
+
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), dir)
+}
+
+func TestRunner_NonExistentDirReturnsError(t *testing.T) {
+	var buf bytes.Buffer
+	r, err := New(Config{
+		Command: "echo",
+		Args:    []string{"hello"},
+		Output:  &buf,
+		Dir:     "/nonexistent/dir/that/does/not/exist",
+	})
+	require.NoError(t, err)
+
+	err = r.Start(context.Background())
+
+	assert.Error(t, err)
+}
+
 func TestRunner_Wait(t *testing.T) {
 	var buf bytes.Buffer
 	r, err := New(Config{

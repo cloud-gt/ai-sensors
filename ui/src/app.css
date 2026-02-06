@@ -1,0 +1,131 @@
+@import 'tailwindcss';
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('https://fonts.gstatic.com/s/ibmplexmono/v19/-F63fjptAgt5VM-kVkqdyU8n5iQ.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('https://fonts.gstatic.com/s/ibmplexmono/v19/-F6qfjptAgt5VM-kVkqdyU8n3twJ.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url('https://fonts.gstatic.com/s/ibmplexmono/v19/-F6qfjptAgt5VM-kVkqdyU8n3vAO.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'DM Sans';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHQ.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'DM Sans';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHQ.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'DM Sans';
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url('https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHQ.woff2') format('woff2');
+}
+
+@theme {
+	--color-surface-0: #0a0a0b;
+	--color-surface-1: #111113;
+	--color-surface-2: #1a1a1e;
+	--color-surface-3: #232328;
+	--color-surface-4: #2c2c33;
+
+	--color-border: #2a2a32;
+	--color-border-subtle: #1e1e24;
+
+	--color-text-primary: #e8e6e3;
+	--color-text-secondary: #8a8891;
+	--color-text-muted: #55535c;
+
+	--color-amber-glow: #e5a620;
+	--color-amber-dim: #b8841a;
+	--color-amber-bright: #f0c040;
+	--color-amber-wash: rgba(229, 166, 32, 0.08);
+
+	--color-signal-run: #34d399;
+	--color-signal-run-bg: rgba(52, 211, 153, 0.1);
+	--color-signal-stop: #f87171;
+	--color-signal-stop-bg: rgba(248, 113, 113, 0.1);
+	--color-signal-idle: #64748b;
+	--color-signal-idle-bg: rgba(100, 116, 139, 0.08);
+
+	--color-danger: #dc2626;
+	--color-danger-hover: #b91c1c;
+
+	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+	--font-sans: 'DM Sans', system-ui, sans-serif;
+}
+
+html {
+	background-color: var(--color-surface-0);
+	color: var(--color-text-primary);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--color-surface-4);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-text-muted);
+}
+
+/* Scanline effect for terminal */
+@keyframes scanline {
+	0% { transform: translateY(-100%); }
+	100% { transform: translateY(100%); }
+}
+
+/* Pulse for running indicator */
+@keyframes pulse-dot {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
+}
+
+/* Fade in */
+@keyframes fade-in {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+	animation: fade-in 0.3s ease-out both;
+}

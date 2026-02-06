@@ -32,7 +32,7 @@ func TestListCommands_Empty(t *testing.T) {
 func TestCreateCommand(t *testing.T) {
 	_, tc := newTestServer()
 
-	cmd, resp := tc.CreateCommand("test-cmd", "echo hello")
+	cmd, resp := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	require.NotNil(t, cmd)
@@ -41,10 +41,44 @@ func TestCreateCommand(t *testing.T) {
 	assert.NotEmpty(t, cmd.ID)
 }
 
+func TestCreateCommand_WithWorkDir(t *testing.T) {
+	_, tc := newTestServer()
+
+	cmd, resp := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	require.NotNil(t, cmd)
+	assert.Equal(t, "/tmp", cmd.WorkDir)
+}
+
+func TestCreateCommand_MissingWorkDir(t *testing.T) {
+	_, tc := newTestServer()
+
+	resp := tc.Do(http.MethodPost, "/commands", map[string]string{
+		"name":    "test-cmd",
+		"command": "echo hello",
+	})
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGetCommand_ReturnsWorkDir(t *testing.T) {
+	_, tc := newTestServer()
+
+	created, _ := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
+	require.NotNil(t, created)
+
+	cmd, resp := tc.GetCommand(created.ID)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NotNil(t, cmd)
+	assert.Equal(t, "/tmp", cmd.WorkDir)
+}
+
 func TestGetCommandByID(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "echo hello")
+	created, _ := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
 	require.NotNil(t, created)
 
 	cmd, resp := tc.GetCommand(created.ID)
@@ -58,8 +92,8 @@ func TestGetCommandByID(t *testing.T) {
 func TestListCommands_NonEmpty(t *testing.T) {
 	_, tc := newTestServer()
 
-	tc.CreateCommand("cmd-a", "echo a")
-	tc.CreateCommand("cmd-b", "echo b")
+	tc.CreateCommand("cmd-a", "echo a", "/tmp")
+	tc.CreateCommand("cmd-b", "echo b", "/tmp")
 
 	commands, resp := tc.ListCommands()
 
@@ -70,7 +104,7 @@ func TestListCommands_NonEmpty(t *testing.T) {
 func TestDeleteCommand(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "echo hello")
+	created, _ := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
 	require.NotNil(t, created)
 
 	resp := tc.DeleteCommand(created.ID)
@@ -83,7 +117,7 @@ func TestDeleteCommand(t *testing.T) {
 func TestStartCommand(t *testing.T) {
 	srv, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	started, resp := tc.StartCommand(created.ID)
@@ -97,7 +131,7 @@ func TestStartCommand(t *testing.T) {
 func TestStartCommand_AlreadyRunning(t *testing.T) {
 	srv, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -114,7 +148,7 @@ func TestStartCommand_AlreadyRunning(t *testing.T) {
 func TestStopCommand(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -128,7 +162,7 @@ func TestStopCommand(t *testing.T) {
 func TestGetCommandStatus(t *testing.T) {
 	srv, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -145,7 +179,7 @@ func TestGetCommandStatus(t *testing.T) {
 func TestGetFullOutput(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "echo hello")
+	created, _ := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -160,7 +194,7 @@ func TestGetFullOutput(t *testing.T) {
 func TestGetLastNLinesOutput(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sh -c 'for i in 1 2 3 4 5; do echo line$i; done'")
+	created, _ := tc.CreateCommand("test-cmd", "sh -c 'for i in 1 2 3 4 5; do echo line$i; done'", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -176,7 +210,7 @@ func TestGetLastNLinesOutput(t *testing.T) {
 func TestFullE2ELifecycle(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, resp := tc.CreateCommand("e2e-cmd", "echo lifecycle")
+	created, resp := tc.CreateCommand("e2e-cmd", "echo lifecycle", "/tmp")
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	_, resp = tc.StartCommand(created.ID)
@@ -217,8 +251,8 @@ func TestCreateCommand_MissingRequiredFields(t *testing.T) {
 func TestCreateCommand_DuplicateName(t *testing.T) {
 	_, tc := newTestServer()
 
-	tc.CreateCommand("test-cmd", "echo hello")
-	_, resp := tc.CreateCommand("test-cmd", "echo world")
+	tc.CreateCommand("test-cmd", "echo hello", "/tmp")
+	_, resp := tc.CreateCommand("test-cmd", "echo world", "/tmp")
 
 	assert.Equal(t, http.StatusConflict, resp.StatusCode)
 }
@@ -258,7 +292,7 @@ func TestInvalidUUIDFormat(t *testing.T) {
 func TestStopNeverStartedCommand(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "echo hello")
+	created, _ := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
 	require.NotNil(t, created)
 
 	resp := tc.StopCommand(created.ID)
@@ -269,7 +303,7 @@ func TestStopNeverStartedCommand(t *testing.T) {
 func TestGetStatusNeverStartedCommand(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "echo hello")
+	created, _ := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
 	require.NotNil(t, created)
 
 	_, resp := tc.GetStatus(created.ID)
@@ -280,7 +314,7 @@ func TestGetStatusNeverStartedCommand(t *testing.T) {
 func TestGetOutputNeverStartedCommand(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "echo hello")
+	created, _ := tc.CreateCommand("test-cmd", "echo hello", "/tmp")
 	require.NotNil(t, created)
 
 	_, resp := tc.GetOutput(created.ID)
@@ -291,7 +325,7 @@ func TestGetOutputNeverStartedCommand(t *testing.T) {
 func TestInvalidLinesParameter(t *testing.T) {
 	srv, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -307,7 +341,7 @@ func TestInvalidLinesParameter(t *testing.T) {
 func TestNegativeLinesParameter(t *testing.T) {
 	srv, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -323,7 +357,7 @@ func TestNegativeLinesParameter(t *testing.T) {
 func TestConcurrentRequestsToSameCommand(t *testing.T) {
 	_, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -355,7 +389,7 @@ func TestConcurrentRequestsToSameCommand(t *testing.T) {
 func TestDeleteRunningCommand(t *testing.T) {
 	srv, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)
@@ -371,7 +405,7 @@ func TestDeleteRunningCommand(t *testing.T) {
 func TestServerShutdownWithRunningCommands(t *testing.T) {
 	srv, tc := newTestServer()
 
-	created, _ := tc.CreateCommand("test-cmd", "sleep 60")
+	created, _ := tc.CreateCommand("test-cmd", "sleep 60", "/tmp")
 	require.NotNil(t, created)
 
 	tc.StartCommand(created.ID)

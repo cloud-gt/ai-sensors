@@ -1,0 +1,87 @@
+
+ ▐▛███▜▌   Claude Code v2.1.33
+▝▜█████▛▘  Opus 4.6 · Claude Max
+  ▘▘ ▝▝    ~/dev/projects/ai-sensors
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Plan to implement                                                            │
+│                                                                              │
+│ Fix: Command immediately stops after starting                                │
+│                                                                              │
+│ Context                                                                      │
+│                                                                              │
+│ When a user clicks "Start" on a command in the dashboard, the command starts │
+│  ({"started": true}) but immediately stops with no output. This is because   │
+│ the HTTP request context (r.Context()) is passed through to the runner. When │
+│  the HTTP response is sent and the request completes, the context is         │
+│ cancelled, which triggers the runner to SIGTERM the process.                 │
+│                                                                              │
+│ Root cause chain:                                                            │
+│ 1. server/commands.go:149 — passes r.Context() to manager.Start()            │
+│ 2. manager/manager.go:102 — derives execution context from the HTTP request  │
+│ context                                                                      │
+│ 3. runner/runner.go:106-108 — monitors ctx.Done() and kills the process when │
+│  it fires                                                                    │
+│                                                                              │
+│ Fix                                                                          │
+│                                                                              │
+│ File: manager/manager.go (line 102)                                          │
+│                                                                              │
+│ Change:                                                                      │
+│ ctx, cancel := context.WithCancel(ctx)                                       │
+│ To:                                                                          │
+│ ctx, cancel := context.WithCancel(context.Background())                      │
+│                                                                              │
+│ The manager already owns the command lifecycle via inst.cancel() (used by    │
+│ Stop() and Shutdown()), so it should not depend on an external context for   │
+│ the long-running execution. Using context.Background() decouples the process │
+│  lifetime from the HTTP request lifetime.                                    │
+│                                                                              │
+│ This is a single-line fix. No other files need changes.                      │
+│                                                                              │
+│ Verification                                                                 │
+│                                                                              │
+│ 1. go build -o ./tmp/main . — ensure it compiles                             │
+│ 2. go test ./... -v — run all tests                                          │
+│ 3. go run github.com/golangci/golangci-lint/cmd/golangci-lint run — lint     │
+│ 4. Manual test: start a command from the dashboard, confirm it stays running │
+│  and output lines appear                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+⏺ Let me read the relevant line in the manager to apply the fix.
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(manager/manager.go)
+  ⎿  Added 1 line, removed 1 line
+       99      return false, err
+      100    }
+      101  
+      102 -  ctx, cancel := context.WithCancel(ctx)                      
+      102 +  ctx, cancel := context.WithCancel(context.Background())     
+      103  
+      104    inst := &Instance{
+      105      command: cmd,
+
+⏺ Now let me verify it compiles, run tests, and lint in parallel.
+
+⏺ Bash(go build -o ./tmp/main .)
+  ⎿  (No content)
+
+⏺ Bash(go test ./... -v 2>&1)
+  ⎿  Error: Exit code 1
+     ?          github.com/cloud-gt/ai-sensors  [no test files]
+     === RUN   TestRingBuffer_BasicWriteAndRead
+     --- PASS: TestRingBuffer_BasicWriteAndRead (0.00s)
+     === RUN   TestRingBuffer_CircularBehaviorOverflow
+     --- PASS: TestRingBuffer_CircularBehaviorOverflow (0.00s)
+     === RUN   TestRingBuffer_LastNReturnsSubset
+     --- PASS: TestRingBuffer_LastNReturnsSubset (0.00s)
+     === RUN   TestRingBuffer_MultipleLinesInSingleWrite
+     --- PASS: TestRingBuffer_MultipleLinesInSingleWrite (0.00s)
+     … +135 lines (ctrl+o to see all)
+
+⏺ Bash(go run github.com/golangci/golangci-lint/cmd/golangci-lint run 2>&1)
+  ⎿  Error: Sibling tool call errored
+  ⎿  You're out of extra usage · resets 1am (America/Toronto)
+     /upgrade or /extra-usage to finish what you’re working on.

@@ -33,6 +33,7 @@ type Config struct {
 	Args        []string
 	Output      io.Writer
 	StopTimeout time.Duration
+	Dir         string
 }
 
 type Runner struct {
@@ -84,6 +85,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	r.cmd.Stdout = r.config.Output
 	r.cmd.Stderr = r.config.Output
 	r.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	r.cmd.Dir = r.config.Dir
 
 	if err := r.cmd.Start(); err != nil {
 		r.mu.Unlock()

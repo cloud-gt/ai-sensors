@@ -18,8 +18,8 @@ func TestJSONFileRepository_SaveAndLoadRoundtrip(t *testing.T) {
 	id1 := uuid.MustParse("01234567-89ab-cdef-0123-456789abcdef")
 	id2 := uuid.MustParse("fedcba98-7654-3210-fedc-ba9876543210")
 	commands := []Command{
-		{ID: id1, Name: "cmd1", Command: "echo 1"},
-		{ID: id2, Name: "cmd2", Command: "echo 2"},
+		{ID: id1, Name: "cmd1", Command: "echo 1", WorkDir: "/tmp"},
+		{ID: id2, Name: "cmd2", Command: "echo 2", WorkDir: "/var"},
 	}
 
 	err := repo.Save(commands)
@@ -37,7 +37,7 @@ func TestJSONFileRepository_FileCreatedOnFirstSave(t *testing.T) {
 	repo := NewJSONFileRepository(path)
 
 	commands := []Command{
-		{ID: uuid.MustParse("01234567-89ab-cdef-0123-456789abcdef"), Name: "cmd1", Command: "echo 1"},
+		{ID: uuid.MustParse("01234567-89ab-cdef-0123-456789abcdef"), Name: "cmd1", Command: "echo 1", WorkDir: "/tmp"},
 	}
 
 	err := repo.Save(commands)
@@ -54,7 +54,7 @@ func TestJSONFileRepository_FileCreatedOnFirstSave(t *testing.T) {
 func TestJSONFileRepository_LoadFromExistingFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "commands.json")
-	content := `{"commands":[{"id":"01234567-89ab-cdef-0123-456789abcdef","name":"test","command":"echo test"}]}`
+	content := `{"commands":[{"id":"01234567-89ab-cdef-0123-456789abcdef","name":"test","command":"echo test","work_dir":"/tmp"}]}`
 	err := os.WriteFile(path, []byte(content), 0644)
 	require.NoError(t, err)
 
@@ -66,6 +66,7 @@ func TestJSONFileRepository_LoadFromExistingFile(t *testing.T) {
 	assert.Equal(t, uuid.MustParse("01234567-89ab-cdef-0123-456789abcdef"), loaded[0].ID)
 	assert.Equal(t, "test", loaded[0].Name)
 	assert.Equal(t, "echo test", loaded[0].Command)
+	assert.Equal(t, "/tmp", loaded[0].WorkDir)
 }
 
 func TestJSONFileRepository_LoadFromNonExistentFile(t *testing.T) {

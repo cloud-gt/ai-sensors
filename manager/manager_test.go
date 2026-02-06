@@ -21,6 +21,7 @@ func TestManager_StartCommandAndReadOutput(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "echo-test",
 		Command: "echo hello",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -42,6 +43,7 @@ func TestManager_FullLifecycle(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "sleep-test",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -73,12 +75,14 @@ func TestManager_RunMultipleCommandsConcurrently(t *testing.T) {
 	cmd1, err := store.Create(command.Command{
 		Name:    "cmd1",
 		Command: "echo first",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
 	cmd2, err := store.Create(command.Command{
 		Name:    "cmd2",
 		Command: "echo second",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -108,6 +112,7 @@ func TestManager_AutoCleanupOnNaturalTermination(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "short-lived",
 		Command: "echo hello",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -133,6 +138,7 @@ func TestManager_AccurateStatusTracking(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "sleep-cmd",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -194,6 +200,7 @@ func TestManager_DoubleStartIdempotent(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "sleep-test",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -217,6 +224,7 @@ func TestManager_DoubleStopIdempotent(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "sleep-test",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -243,6 +251,7 @@ func TestManager_ConcurrentAccessFromMultipleGoroutines(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "sleep-cmd",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -282,12 +291,14 @@ func TestManager_ResourceCleanupOnShutdown(t *testing.T) {
 	cmd1, err := store.Create(command.Command{
 		Name:    "sleep1",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
 	cmd2, err := store.Create(command.Command{
 		Name:    "sleep2",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -319,6 +330,7 @@ func TestManager_WithBufferCapacity(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "multi-line",
 		Command: "sh -c 'for i in 1 2 3 4 5; do echo line$i; done'",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -341,6 +353,7 @@ func TestManager_OutputLastN(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "multi-line",
 		Command: "sh -c 'for i in 1 2 3 4 5; do echo line$i; done'",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -373,6 +386,7 @@ func TestManager_ContextCancellationStopsCommand(t *testing.T) {
 	cmd, err := store.Create(command.Command{
 		Name:    "sleep-cmd",
 		Command: "sleep 60",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 
@@ -399,11 +413,72 @@ func TestManager_ContextCancellationStopsCommand(t *testing.T) {
 	assert.Equal(t, StatusStopped, status)
 }
 
+func TestManager_StartCommandWithWorkDir(t *testing.T) {
+	store := newTestStore()
+	dir := t.TempDir()
+	cmd, err := store.Create(command.Command{
+		Name:    "pwd-test",
+		Command: "pwd",
+		WorkDir: dir,
+	})
+	require.NoError(t, err)
+
+	m := New(store)
+
+	started, err := m.Start(context.Background(), cmd.ID)
+	require.NoError(t, err)
+	assert.True(t, started)
+
+	time.Sleep(200 * time.Millisecond)
+
+	output, err := m.Output(cmd.ID)
+	require.NoError(t, err)
+	assert.Contains(t, output, dir)
+}
+
+func TestManager_ConcurrentCommandsWithDifferentWorkDirs(t *testing.T) {
+	store := newTestStore()
+	dir1 := t.TempDir()
+	dir2 := t.TempDir()
+
+	cmd1, err := store.Create(command.Command{
+		Name:    "pwd1",
+		Command: "pwd",
+		WorkDir: dir1,
+	})
+	require.NoError(t, err)
+
+	cmd2, err := store.Create(command.Command{
+		Name:    "pwd2",
+		Command: "pwd",
+		WorkDir: dir2,
+	})
+	require.NoError(t, err)
+
+	m := New(store)
+
+	_, err = m.Start(context.Background(), cmd1.ID)
+	require.NoError(t, err)
+	_, err = m.Start(context.Background(), cmd2.ID)
+	require.NoError(t, err)
+
+	time.Sleep(200 * time.Millisecond)
+
+	output1, err := m.Output(cmd1.ID)
+	require.NoError(t, err)
+	assert.Contains(t, output1, dir1)
+
+	output2, err := m.Output(cmd2.ID)
+	require.NoError(t, err)
+	assert.Contains(t, output2, dir2)
+}
+
 func TestManager_ShutdownRespectsContextCancellation(t *testing.T) {
 	store := newTestStore()
 	cmd, err := store.Create(command.Command{
 		Name:    "trap-sigterm",
 		Command: "sh -c 'trap \"\" TERM; sleep 60'",
+		WorkDir: "/tmp",
 	})
 	require.NoError(t, err)
 

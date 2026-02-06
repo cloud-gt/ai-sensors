@@ -51,10 +51,11 @@ func (tc *TestClient) Do(method, path string, body any) *Response {
 	}
 }
 
-func (tc *TestClient) CreateCommand(name, cmd string) (*command.Command, *Response) {
+func (tc *TestClient) CreateCommand(name, cmd, workDir string) (*command.Command, *Response) {
 	resp := tc.Do(http.MethodPost, "/commands", map[string]string{
-		"name":    name,
-		"command": cmd,
+		"name":     name,
+		"command":  cmd,
+		"work_dir": workDir,
 	})
 
 	if resp.StatusCode != http.StatusCreated {

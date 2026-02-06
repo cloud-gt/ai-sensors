@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"io/fs"
 	"net/http"
 
 	"github.com/cloud-gt/ai-sensors/command"
@@ -28,6 +29,15 @@ func New(store *command.Store, mgr *manager.Manager) *Server {
 	s.router.Mount("/commands", commandsAPI.Router())
 
 	return s
+}
+
+// MountDashboard registers the SPA dashboard handler at /dashboard.
+func (s *Server) MountDashboard(dashFS fs.FS) {
+	handler := NewDashboardHandler(dashFS)
+	s.router.Mount("/dashboard", http.StripPrefix("/dashboard", handler))
+	s.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
+	})
 }
 
 func (s *Server) Router() chi.Router {
